@@ -241,14 +241,55 @@ function render() {
         <h3>Meno</h3>
         <input class="inp" id="nameChg" type="text" value="${state.name}"/>
         <button class="btn-sm" onclick="changeName()">Zmeniť meno</button>
+      </div>
+      <div class="settings-card">
+        <h3>Vymazať dáta</h3>
+        <p>Vymaže meno a všetky hlasy z tohto prehliadača.</p>
+        <button class="btn-sm" onclick="clearData()">Vymazať a začať znova</button>
       </div>`;
   }
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem('hlasovanie_name', state.name);
+    localStorage.setItem('hlasovanie_votes', JSON.stringify(state.votes));
+    localStorage.setItem('hlasovanie_submitted', state.submitted ? '1' : '0');
+  } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    const name = localStorage.getItem('hlasovanie_name');
+    const votes = localStorage.getItem('hlasovanie_votes');
+    const submitted = localStorage.getItem('hlasovanie_submitted');
+    if (name) state.name = name;
+    if (votes) state.votes = JSON.parse(votes);
+    if (submitted) state.submitted = submitted === '1';
+  } catch(e) {}
+}
+
+function clearData() {
+  localStorage.removeItem('hlasovanie_name');
+  localStorage.removeItem('hlasovanie_votes');
+  localStorage.removeItem('hlasovanie_submitted');
+  state.name = '';
+  state.votes = {};
+  state.submitted = false;
+  render();
+}
+
+async function apiFetch(url) {
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
 }
 
 function startVoting() {
   const v = document.getElementById('ni').value.trim();
   if (!v) return;
   state.name = v;
+  saveToStorage();
   render();
 }
 
@@ -259,6 +300,7 @@ function vote(id, val) {
   else state.votes[id] = val;
   state.submitted = false;
   state.status = '';
+  saveToStorage();
   render();
 }
 
@@ -272,18 +314,8 @@ function changeName() {
   if (!v) return;
   state.name = v;
   state.submitted = false;
+  saveToStorage();
   render();
-}
-
-function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cb = 'cb_' + Math.random().toString(36).slice(2);
-    const script = document.createElement('script');
-    window[cb] = (data) => { delete window[cb]; script.remove(); resolve(data); };
-    script.onerror = () => { delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
-    document.head.appendChild(script);
-  });
 }
 
 async function submitVotes() {
@@ -297,15 +329,16 @@ async function submitVotes() {
       votes: JSON.stringify(state.votes),
       timestamp: new Date().toISOString()
     });
-    await jsonp(SHEET_URL + '?' + params.toString());
+    await apiFetch(SHEET_URL + '?' + params.toString());
     state.submitted = true;
     state.submitting = false;
     state.status = '✓ Hlasy úspešne odovzdané!';
     state.statusType = 'ok';
+    saveToStorage();
     render();
   } catch (e) {
     state.submitting = false;
-    state.status = 'Chyba pri odosielaní. Skontroluj pripojenie.';
+    state.status = 'Chyba pri odosielaní: ' + e.message;
     state.statusType = 'err';
     render();
   }
@@ -313,7 +346,7 @@ async function submitVotes() {
 
 async function loadResults() {
   try {
-    const data = await jsonp(SHEET_URL + '?action=results');
+    const data = await apiFetch(SHEET_URL + '?action=results');
     const scores = data.scores || {};
     const voters = data.voters || [];
 
@@ -350,10 +383,11 @@ async function loadResults() {
 
     document.getElementById('rc').innerHTML = html;
   } catch (e) {
-    document.getElementById('rc').innerHTML = '<p style="color:#fc8080;font-size:14px">Chyba pri načítaní výsledkov.</p>';
+    document.getElementById('rc').innerHTML = '<p style="color:#fc8080;font-size:14px">Chyba pri načítaní výsledkov: ' + e.message + '</p>';
   }
 }
 
+loadFromStorage();
 render();
 </script>
 </body>
