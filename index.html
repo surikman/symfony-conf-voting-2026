@@ -109,7 +109,7 @@ a{color:inherit}
     <p>SymfonyOnline &amp; Symfony Berlin — vyber čo chceš vidieť</p>
   </div>
   <div id="app"></div>
-  <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:#333">v2026-06-18.3</div>
+  <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:#333">v2026-06-18.4</div>
 </div>
 
 <script>
@@ -361,8 +361,19 @@ async function submitVotes() {
 }
 
 async function loadResults() {
+  const rc = document.getElementById('rc');
+  const url = SHEET_URL + '?action=results';
   try {
-    const data = await jsonp(SHEET_URL + '?action=results');
+    let data;
+    try {
+      // Try fetch first (works if CORS is available)
+      const res = await fetch(url, { redirect: 'follow' });
+      data = await res.json();
+    } catch (fetchErr) {
+      console.warn('fetch failed (' + fetchErr.message + '), trying JSONP...');
+      // Fallback to JSONP (bypasses CORS via <script> tag)
+      data = await jsonp(url, 15000);
+    }
     const scores = data.scores || {};
     const voters = data.voters || [];
 
@@ -397,9 +408,11 @@ async function loadResults() {
       </div>`;
     });
 
-    document.getElementById('rc').innerHTML = html;
+    rc.innerHTML = html;
   } catch (e) {
-    document.getElementById('rc').innerHTML = '<p style="color:#fc8080;font-size:14px">Chyba pri načítaní výsledkov: ' + e.message + '</p>';
+    console.error('loadResults failed:', e, 'URL:', url);
+    rc.innerHTML = '<p style="color:#fc8080;font-size:14px">Chyba pri načítaní výsledkov: ' + e.message + '</p>'
+      + '<p style="color:#555;font-size:12px;margin-top:6px">Otvor DevTools (F12 → Console) pre detaily.</p>';
   }
 }
 
