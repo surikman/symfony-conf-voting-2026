@@ -112,7 +112,7 @@ a{color:inherit}
 </div>
 
 <script>
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz4Q3OEBfHD3p61bW3KWtCHkv1_4FCQXew0YSxfkSrCvizW5YjBjVjJm1rzTkZNZTDA/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwuao5Un_xeiz8_H36U3TvdyPUpld-bPlPDiOtPUOR-IWFjo45XnH1SbsUeYCrOKsaE/exec';
 
 const TALKS = [
   {id:'sidekicks',title:'Reconfiguring Symfony in real time with sidekicks',speaker:'Nicolas Grekas',conf:'both',desc:'FrankenPHP umožňuje dlhobežiace PHP workery — táto prednáška predstavuje vzor "sidekicks": špecializované workery mimo HTTP cyklu, ktoré rekonfigurujú aplikáciu v reálnom čase (Redis Sentinel, feature flags) bez pollingov a redeploymentov.'},
@@ -275,6 +275,17 @@ function changeName() {
   render();
 }
 
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    window[cb] = (data) => { delete window[cb]; script.remove(); resolve(data); };
+    script.onerror = () => { delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    document.head.appendChild(script);
+  });
+}
+
 async function submitVotes() {
   state.submitting = true;
   state.status = '';
@@ -286,7 +297,7 @@ async function submitVotes() {
       votes: JSON.stringify(state.votes),
       timestamp: new Date().toISOString()
     });
-    await fetch(SHEET_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' });
+    await jsonp(SHEET_URL + '?' + params.toString());
     state.submitted = true;
     state.submitting = false;
     state.status = '✓ Hlasy úspešne odovzdané!';
@@ -302,8 +313,7 @@ async function submitVotes() {
 
 async function loadResults() {
   try {
-    const res = await fetch(SHEET_URL + '?action=results');
-    const data = await res.json();
+    const data = await jsonp(SHEET_URL + '?action=results');
     const scores = data.scores || {};
     const voters = data.voters || [];
 
