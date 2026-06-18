@@ -279,6 +279,21 @@ function clearData() {
   render();
 }
 
+function jsonp(url, timeout = 15000) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cb]; script.remove();
+      reject(new Error('Timeout (15s) — skontroluj Apps Script'));
+    }, timeout);
+    window[cb] = (data) => { clearTimeout(timer); delete window[cb]; script.remove(); resolve(data); };
+    script.onerror = () => { clearTimeout(timer); delete window[cb]; script.remove(); reject(new Error('Script load failed')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    document.head.appendChild(script);
+  });
+}
+
 async function apiFetch(url) {
   const res = await fetch(url, { redirect: 'follow' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -329,7 +344,7 @@ async function submitVotes() {
       votes: JSON.stringify(state.votes),
       timestamp: new Date().toISOString()
     });
-    await apiFetch(SHEET_URL + '?' + params.toString());
+    await fetch(SHEET_URL + '?' + params.toString(), { mode: 'no-cors' });
     state.submitted = true;
     state.submitting = false;
     state.status = '✓ Hlasy úspešne odovzdané!';
@@ -346,7 +361,7 @@ async function submitVotes() {
 
 async function loadResults() {
   try {
-    const data = await apiFetch(SHEET_URL + '?action=results');
+    const data = await jsonp(SHEET_URL + '?action=results');
     const scores = data.scores || {};
     const voters = data.voters || [];
 
