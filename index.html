@@ -109,7 +109,7 @@ a{color:inherit}
     <p>SymfonyOnline &amp; Symfony Berlin — vyber čo chceš vidieť</p>
   </div>
   <div id="app"></div>
-  <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:#333">v2026-06-18.4</div>
+  <div style="text-align:center;padding:2rem 0 1rem;font-size:11px;color:#333">v2026-06-18.5</div>
 </div>
 
 <script>
@@ -360,55 +360,80 @@ async function submitVotes() {
   }
 }
 
+function loadResultsViaIframe(url) {
+  return new Promise((resolve, reject) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden';
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      iframe.remove();
+      reject(new Error('iFrame timeout — skontroluj Apps Script (output=html)'));
+    }, 15000);
+    function handler(e) {
+      if (e.data && typeof e.data === 'object' && 'voters' in e.data) {
+        clearTimeout(timer);
+        window.removeEventListener('message', handler);
+        iframe.remove();
+        resolve(e.data);
+      }
+    }
+    window.addEventListener('message', handler);
+    document.body.appendChild(iframe);
+    iframe.src = url + '&output=html';
+  });
+}
+
+function renderResults(data, rc) {
+  const scores = data.scores || {};
+  const voters = data.voters || [];
+
+  const sorted = TALKS.map(t => {
+    const s = scores[t.id] || { yes: 0, maybe: 0, no: 0 };
+    const score = (s.yes || 0) * 2 + (s.maybe || 0);
+    return { ...t, s, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const max = sorted[0]?.score || 1;
+
+  let html = `<p class="voters-info">Hlasovalo: <strong>${voters.length}</strong> ${voters.length === 1 ? 'osoba' : 'ľudí'}</p>`;
+
+  sorted.forEach((t, i) => {
+    const pct = max > 0 ? Math.round((t.score / max) * 100) : 0;
+    html += `<div class="results-card">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <span class="rank">${i+1}</span>
+        <div style="flex:1">
+          <div class="card-badges">${confBadge(t.conf)}</div>
+          <p class="card-title">${t.title}</p>
+          <p class="card-meta">${t.speaker}</p>
+          <div class="score-pills">
+            <span class="pill-yes">Určite: ${t.s.yes||0}</span>
+            <span class="pill-maybe">Možno: ${t.s.maybe||0}</span>
+            <span class="pill-no">Nie: ${t.s.no||0}</span>
+            <span class="pill-score">skóre ${t.score}</span>
+          </div>
+          <div class="results-bar"><div class="results-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  rc.innerHTML = html;
+}
+
 async function loadResults() {
   const rc = document.getElementById('rc');
   const url = SHEET_URL + '?action=results';
   try {
     let data;
     try {
-      // Try fetch first (works if CORS is available)
       const res = await fetch(url, { redirect: 'follow' });
       data = await res.json();
     } catch (fetchErr) {
-      console.warn('fetch failed (' + fetchErr.message + '), trying JSONP...');
-      // Fallback to JSONP (bypasses CORS via <script> tag)
-      data = await jsonp(url, 15000);
+      console.warn('fetch failed (' + fetchErr.message + '), trying iframe postMessage...');
+      data = await loadResultsViaIframe(url);
     }
-    const scores = data.scores || {};
-    const voters = data.voters || [];
-
-    const sorted = TALKS.map(t => {
-      const s = scores[t.id] || { yes: 0, maybe: 0, no: 0 };
-      const score = (s.yes || 0) * 2 + (s.maybe || 0);
-      return { ...t, s, score };
-    }).sort((a, b) => b.score - a.score);
-
-    const max = sorted[0]?.score || 1;
-
-    let html = `<p class="voters-info">Hlasovalo: <strong>${voters.length}</strong> ${voters.length === 1 ? 'osoba' : 'ľudí'}</p>`;
-
-    sorted.forEach((t, i) => {
-      const pct = max > 0 ? Math.round((t.score / max) * 100) : 0;
-      html += `<div class="results-card">
-        <div style="display:flex;align-items:flex-start;gap:8px">
-          <span class="rank">${i+1}</span>
-          <div style="flex:1">
-            <div class="card-badges">${confBadge(t.conf)}</div>
-            <p class="card-title">${t.title}</p>
-            <p class="card-meta">${t.speaker}</p>
-            <div class="score-pills">
-              <span class="pill-yes">Určite: ${t.s.yes||0}</span>
-              <span class="pill-maybe">Možno: ${t.s.maybe||0}</span>
-              <span class="pill-no">Nie: ${t.s.no||0}</span>
-              <span class="pill-score">skóre ${t.score}</span>
-            </div>
-            <div class="results-bar"><div class="results-bar-fill" style="width:${pct}%"></div></div>
-          </div>
-        </div>
-      </div>`;
-    });
-
-    rc.innerHTML = html;
+    renderResults(data, rc);
   } catch (e) {
     console.error('loadResults failed:', e, 'URL:', url);
     rc.innerHTML = '<p style="color:#fc8080;font-size:14px">Chyba pri načítaní výsledkov: ' + e.message + '</p>'
