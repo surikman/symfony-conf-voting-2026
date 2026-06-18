@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Symfony Talks — Hlasovanie</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e8e8e8;font-size:15px;line-height:1.5;min-height:100vh}
+a{color:inherit}
+
+/* Layout */
+.wrap{max-width:780px;margin:0 auto;padding:2rem 1.25rem 4rem}
+
+/* Header */
+.header{margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid #222}
+.header h1{font-size:26px;font-weight:600;letter-spacing:-0.5px;color:#fff}
+.header h1 span{color:#7c5cfc}
+.header p{font-size:14px;color:#666;margin-top:5px}
+
+/* Tabs */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid #222;margin-bottom:2rem}
+.tab{padding:9px 18px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:14px;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s}
+.tab:hover{color:#ccc}
+.tab.active{color:#fff;border-bottom-color:#7c5cfc;font-weight:500}
+
+/* Name screen */
+.name-screen{max-width:340px;padding-top:1rem}
+.name-screen p{font-size:14px;color:#888;margin-bottom:10px}
+.inp{width:100%;font-size:14px;padding:10px 13px;border:1px solid #2a2a2a;border-radius:8px;font-family:inherit;background:#191b22;color:#e8e8e8;outline:none;transition:border-color 0.15s}
+.inp:focus{border-color:#7c5cfc}
+.btn-main{margin-top:10px;width:100%;padding:11px;border:1px solid #7c5cfc;border-radius:8px;background:#7c5cfc18;font-family:inherit;font-size:14px;cursor:pointer;color:#b09dfc;transition:background 0.15s}
+.btn-main:hover{background:#7c5cfc30}
+
+/* Top bar */
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.top-bar-left{font-size:14px;color:#888}
+.top-bar-left strong{color:#e8e8e8}
+.submitted-pill{font-size:12px;color:#68d391;background:#1a3a27;padding:3px 11px;border-radius:20px;border:1px solid #2a5a3a}
+
+/* Section label */
+.conf-label{font-size:11px;font-weight:600;letter-spacing:0.08em;color:#555;text-transform:uppercase;margin:2rem 0 0.75rem;padding-left:2px}
+
+/* Card */
+.card{background:#161820;border:1px solid #222;border-radius:10px;padding:1rem 1.25rem;margin-bottom:8px;transition:border-color 0.15s}
+.card:hover{border-color:#2e2e3e}
+.card-badges{margin-bottom:6px}
+.badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;margin-right:5px;font-weight:500}
+.badge-online{background:#0d2340;color:#5ba3e0;border:1px solid #1a3a5c}
+.badge-berlin{background:#1e1040;color:#9d7de8;border:1px solid #2e1a5c}
+.badge-both{background:#0d3025;color:#5bbf96;border:1px solid #1a4a38}
+.card-title{font-size:14px;font-weight:500;color:#e8e8e8;line-height:1.4}
+.card-meta{font-size:12px;color:#555;margin-top:3px}
+.card-desc{font-size:13px;color:#888;margin-top:10px;line-height:1.55;display:none}
+.card-desc.open{display:block}
+.toggle-desc{font-size:12px;color:#555;cursor:pointer;background:none;border:none;padding:0;margin-top:6px;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
+.toggle-desc:hover{color:#888}
+
+/* Vote buttons */
+.vote-btns{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.vbtn{border:1px solid #2a2a2a;background:transparent;border-radius:7px;padding:6px 13px;font-size:13px;cursor:pointer;font-family:inherit;color:#666;transition:all 0.15s;white-space:nowrap}
+.vbtn:hover{border-color:#444;color:#aaa;background:#1e1e28}
+.vbtn.yes.active{background:#0d3020;border-color:#2a6040;color:#68d391;font-weight:500}
+.vbtn.maybe.active{background:#2e1f00;border-color:#5a3a00;color:#e8a83c;font-weight:500}
+.vbtn.no.active{background:#2e0d0d;border-color:#5a1a1a;color:#fc8080;font-weight:500}
+
+/* Submit */
+.submit-btn{width:100%;padding:13px;border:1px solid #2a2a2a;border-radius:8px;background:transparent;font-family:inherit;font-size:15px;cursor:pointer;margin-top:1.5rem;color:#888;transition:all 0.15s}
+.submit-btn:hover{border-color:#7c5cfc;color:#b09dfc;background:#7c5cfc10}
+.submit-btn:disabled{opacity:0.35;cursor:not-allowed}
+.status-msg{font-size:13px;color:#555;text-align:center;margin-top:10px;min-height:20px}
+.status-msg.ok{color:#68d391}
+.status-msg.err{color:#fc8080}
+
+/* Progress bar */
+.progress{height:2px;background:#1e1e28;border-radius:2px;margin-bottom:1.5rem;overflow:hidden}
+.progress-fill{height:100%;background:#7c5cfc;border-radius:2px;transition:width 0.3s}
+
+/* Results */
+.results-card{background:#161820;border:1px solid #222;border-radius:10px;padding:1rem 1.25rem;margin-bottom:8px}
+.score-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.pill-yes{background:#0d3020;color:#68d391;padding:2px 10px;border-radius:20px}
+.pill-maybe{background:#2e1f00;color:#e8a83c;padding:2px 10px;border-radius:20px}
+.pill-no{background:#2e0d0d;color:#fc8080;padding:2px 10px;border-radius:20px}
+.pill-score{color:#555;margin-left:auto;font-size:12px;align-self:center}
+.results-bar{height:3px;background:#1e1e28;border-radius:2px;margin-top:10px;overflow:hidden}
+.results-bar-fill{height:100%;border-radius:2px;background:#7c5cfc;transition:width 0.4s}
+.rank{font-size:18px;font-weight:700;color:#2e2e3e;margin-right:10px;flex-shrink:0;width:28px;text-align:right}
+
+/* Settings */
+.settings-card{background:#161820;border:1px solid #222;border-radius:10px;padding:1.25rem;margin-bottom:10px}
+.settings-card h3{font-size:14px;font-weight:500;margin-bottom:6px;color:#e8e8e8}
+.settings-card p{font-size:13px;color:#666;margin-bottom:10px}
+.btn-sm{padding:8px 16px;border:1px solid #2a2a2a;border-radius:7px;background:transparent;font-family:inherit;font-size:13px;cursor:pointer;color:#888;margin-top:8px;transition:all 0.15s}
+.btn-sm:hover{border-color:#444;color:#ccc}
+
+/* Loader */
+.loader{color:#555;font-size:14px;padding:2rem 0}
+
+/* Voters info */
+.voters-info{font-size:13px;color:#555;margin-bottom:1.25rem}
+.voters-info strong{color:#888}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Symfony Talks <span>2025</span></h1>
+    <p>SymfonyOnline &amp; Symfony Berlin — vyber čo chceš vidieť</p>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz4Q3OEBfHD3p61bW3KWtCHkv1_4FCQXew0YSxfkSrCvizW5YjBjVjJm1rzTkZNZTDA/exec';
+
+const TALKS = [
+  {id:'sidekicks',title:'Reconfiguring Symfony in real time with sidekicks',speaker:'Nicolas Grekas',conf:'both',desc:'FrankenPHP umožňuje dlhobežiace PHP workery — táto prednáška predstavuje vzor "sidekicks": špecializované workery mimo HTTP cyklu, ktoré rekonfigurujú aplikáciu v reálnom čase (Redis Sentinel, feature flags) bez pollingov a redeploymentov.'},
+  {id:'phpstan-ai',title:'AI Writes Code. PHPStan Keeps It Honest.',speaker:'Dave Liddament',conf:'both',desc:'AI píše kód rýchlo, ale ako mu dôverovať? Prednáška ukazuje, ako písať vlastné PHPStan pravidlá pre vynútenie coding standards — aby ste mohli bezpečne integrovať AI do vývoja bez zníženia štandardov.'},
+  {id:'ai-action',title:'Symfony AI in Action',speaker:'Christopher Hertel',conf:'both',desc:'Ako realisticky integrovať AI do existujúcich produktov? Nielen chatboty, ale aj agentické funkcie v PHP aplikáciách. Inšpirácia kde začať a čo je realistické.'},
+  {id:'jj',title:'Git, But Better: An Introduction to Jujutsu (jj)',speaker:'Pauline Vos',conf:'both',desc:'Jujutsu (jj) rieši pain pointy Gitu bez prepínania nástrojov — funguje priamo v existujúcom Git repozitári. Jednoduchšie commity, konflikty a undo.'},
+  {id:'perf',title:'Accelerate: Debugging Performance in PHP',speaker:'Sebastian Bergmann',conf:'berlin',desc:'Praktické techniky na identifikáciu a riešenie performance bottleneckov: vizualizácia execúcie, meranie nákladov, spotovanie regresií. Od perceived slowdown k actionable insights.'},
+  {id:'event-berlin',title:'Event Streaming Architecture with Symfony Messenger',speaker:'Max Beckers',conf:'berlin',desc:'Čo je event streaming a kedy sa oplatí? Dizajn a implementácia event streamingu cez Messenger s praktickými príkladmi.'},
+  {id:'lazy',title:'How native lazy objects will change Doctrine and Symfony forever',speaker:'Benjamin Eberlei',conf:'berlin',desc:'PHP 8.4 prináša natívne lazy loading a proxy objekty bez generovania kódu. Ako to mení Doctrine aj Symfony navždy.'},
+  {id:'static-sec',title:'Finding security vulnerabilities with static analysis',speaker:'Nic Wortel',conf:'berlin',desc:'Ako nástroje statickej analýzy automaticky detekujú bežné bezpečnostné zraniteľnosti v Symfony aplikáciách.'},
+  {id:'mate-berlin',title:'Symfony AI-Mate',speaker:'Wachter Johannes',conf:'berlin',desc:'Od decembra 2025 obsahuje Symfony/AI v0.1 komponent Mate. Implementácia, efektívne použitie, silné stránky vs. nevýhody.'},
+  {id:'mcp-talk',title:'Make your AI useful with MCP',speaker:'Tobias Nyholm',conf:'berlin',desc:'MCP protokol umožňuje opýtať sa "aký je stav môjho posledného objednávku?" namiesto generických otázok. Od základov po implementáciu.'},
+  {id:'sylius',title:'AI Culture in Open Source — The Sylius Way',speaker:'Magdalena Sadowska',conf:'berlin',desc:'Skutočná výzva AI nie je technická, ale kultúrna. Lekcie zo Sylius projektu o budovaní AI-friendly kultúry v open source komunite.'},
+  {id:'arch-change',title:'Build Applications that Welcome Change',speaker:'Alexander M. Turek',conf:'berlin',desc:'Architektonické rozhodnutia, ktoré nechávajú business logiku stabilnú kým sa okolná technológia vyvíja. Pokojnejšie upgrady, bezpečnejší refactoring.'},
+  {id:'teamwork',title:'Specing out teamwork',speaker:'Stiven Llupa',conf:'berlin',desc:'Tri kľúčové stratégie pre Symfony tímy: streamlining príspevkov, zlepšenie kolaborácie a delivery časov.'},
+  {id:'simul',title:'Simultaneous editing: Easy mode with Symfony UX',speaker:'David Buchmann',conf:'berlin',desc:'Hotwire Turbo + Turbo Streams + Stimulus integrované v Symfony UX pre rýchle interaktívne webové aplikácie bez oddeleného JS frontendu.'},
+  {id:'orm',title:'Abstraction Attraction: How ORMs Shape and Limit Our Thinking',speaker:'Andreas Braun',conf:'berlin',desc:'Doctrine nás naučila myslieť v tabuľkách. Keď moderné databázy presahujú relačný model, abstrakcie nás brzdí. Wake-up call pre každého kto bojoval s Doctrine.'},
+  {id:'tui',title:'Building TUIs in PHP: The Symfony Terminal Component',speaker:'Fabien Potencier',conf:'online',desc:'Nový Symfony Terminal Component — TUI toolkit v PHP. Architektúra, primitívy, a live ukážka vrátane otvárania PR priamo na pódiu!'},
+  {id:'mate-online',title:'Symfony Mate: Real Runtime Context for AI Coding Assistants',speaker:'Wachter Johannes',conf:'online',desc:'Symfony Mate je MCP server, ktorý exponuje deterministický pohľad na vašu bežiacu Symfony aplikáciu pre Claude Code, Codex, Cursor. Rieši N+1 bug za sekundy.'},
+  {id:'ai-platform',title:'Symfony AI: Platform, Agent, and Store',speaker:'Christopher Hertel',conf:'online',desc:'Tri komponenty Symfony AI: Platform s invoke() API, Agent s #[AsTool] a multi-agent orchestráciou, Store pre RAG s vector queries v Profileri.'},
+  {id:'llm-sec',title:'Hunting Vulnerabilities in Symfony with LLMs',speaker:'Vincent Amstoutz',conf:'online',desc:'LLM rozumie kontextu a zámerom kódu. High-speed security pipeline pre odhaľovanie broken access control, injection paths a logic flaws.'},
+  {id:'voice',title:'Giving voice to your agents, the Symfony AI way',speaker:'Guillaume Loulier',conf:'online',desc:'Ako pridať hlas existujúcemu agentovi: latencia, cost per minute, debugging, failover — bez opustenia Symfony.'},
+  {id:'phpstan-online',title:'Custom PHPStan Rules: Guardrails for AI-Assisted Symfony Code',speaker:'Dave Liddament',conf:'online',desc:'PHPStan internals: php-parser AST, Rector playground, implementácia Rule interface. Príklady: zákaz extends ServiceEntityRepository a kebab-case v #[Route].'},
+  {id:'mcp-sdk',title:'Building MCP Servers with the Official PHP SDK',speaker:'Tobias Nyholm',conf:'online',desc:'MCP špecifikácia od základov: JSON-RPC 2.0, PHP mcp-sdk (Symfony AI + Anthropic + PHP Foundation), Symfony bundle integrácia so security.yaml.'},
+  {id:'event-online',title:'Event Streaming with Symfony Messenger',speaker:'Max Beckers',conf:'online',desc:'Order pipeline na Messenger + RabbitMQ: immutability, snapshots, idempotency, per-consumer routing, dead letters, retry stratégie.'},
+  {id:'enc',title:'Protect your data with Queryable Encryption',speaker:'Jérôme Tamarelle',conf:'online',desc:'Client-side field-level encryption s Doctrine a KMS — bez straty schopnosti spúšťať queries. Algoritmy, key management, key rotation.'},
+  {id:'mobile',title:'From Web to Mobile with Symfony & Hotwire Native',speaker:'Imad ZAIRIG',conf:'online',desc:'Rovnaký Symfony backend pre web aj natívne iOS/Android. Architektúra Hotwire Native, QR kód/NFC/document scanning, trade-offs oproti React Native.'},
+  {id:'hex',title:'Symfony 8: The Hexagonal Track',speaker:'Robin Chalas',conf:'online',desc:'Symfony 8 a moderné PHP sa prirodzene zarovnávajú s hexagonálnym myslením a tactical DDD — bez workaroundov. Business logika first.'},
+  {id:'audit',title:'Dealing with audit logs',speaker:'Hubert Lenoir',conf:'online',desc:'Čo zachytávať, kde ukladať, GDPR? SensioLabs prístup: klasické pasce, existujúce bundly, custom audit logger a konzumácia logov.'},
+  {id:'dx2026',title:'Coding at the speed of thought: Symfony DX in 2026',speaker:'Kévin Dunglas',conf:'online',desc:'FrankenPHP v DX: projekt v sekundách s auto HTTPS, hot reloading cez Mercure, worker mode v dev pre okamžitú cache refresh, integrácia s Claude Code.'},
+];
+
+const GROUPS = [
+  {label:'Online & Berlin', filter: t => t.conf === 'both'},
+  {label:'SymfonyOnline', filter: t => t.conf === 'online'},
+  {label:'Symfony Berlin', filter: t => t.conf === 'berlin'},
+];
+
+let state = {
+  name: '',
+  votes: {},
+  tab: 'vote',
+  descOpen: {},
+  status: '',
+  statusType: '',
+  submitting: false,
+  submitted: false,
+};
+
+function confBadge(c) {
+  if (c === 'both') return '<span class="badge badge-both">Online & Berlin</span>';
+  if (c === 'online') return '<span class="badge badge-online">SymfonyOnline</span>';
+  return '<span class="badge badge-berlin">Berlin</span>';
+}
+
+function render() {
+  const app = document.getElementById('app');
+
+  if (!state.name) {
+    app.innerHTML = `
+      <div class="name-screen">
+        <p>Zadaj svoje meno pred hlasovaním:</p>
+        <input class="inp" id="ni" type="text" placeholder="Tvoje meno" autocomplete="off"/>
+        <button class="btn-main" onclick="startVoting()">Pokračovať →</button>
+      </div>`;
+    const ni = document.getElementById('ni');
+    if (ni) ni.addEventListener('keydown', e => { if (e.key === 'Enter') startVoting(); });
+    ni.focus();
+    return;
+  }
+
+  const tabs = `<div class="tab-bar">
+    <button class="tab ${state.tab==='vote'?'active':''}" onclick="setTab('vote')">Hlasovanie</button>
+    <button class="tab ${state.tab==='results'?'active':''}" onclick="setTab('results')">Výsledky</button>
+    <button class="tab ${state.tab==='settings'?'active':''}" onclick="setTab('settings')">Nastavenia</button>
+  </div>`;
+
+  if (state.tab === 'vote') {
+    const vc = Object.keys(state.votes).length;
+    const pct = Math.round((vc / TALKS.length) * 100);
+
+    let html = tabs;
+    html += `<div class="top-bar">
+      <div class="top-bar-left">Ahoj, <strong>${state.name}</strong> &nbsp;·&nbsp; ${vc}/${TALKS.length} ohodnotených</div>
+      ${state.submitted ? '<span class="submitted-pill">✓ Odovzdané</span>' : ''}
+    </div>`;
+    html += `<div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+
+    for (const g of GROUPS) {
+      const talks = TALKS.filter(g.filter);
+      html += `<p class="conf-label">${g.label}</p>`;
+      for (const t of talks) {
+        const v = state.votes[t.id] || '';
+        const open = state.descOpen[t.id];
+        html += `<div class="card">
+          <div class="card-badges">${confBadge(t.conf)}</div>
+          <p class="card-title">${t.title}</p>
+          <p class="card-meta">${t.speaker}</p>
+          <p class="card-desc ${open?'open':''}">${t.desc}</p>
+          <button class="toggle-desc" onclick="toggleDesc('${t.id}')">${open ? 'Skryť popis' : 'Zobraziť popis'}</button>
+          <div class="vote-btns">
+            <button class="vbtn yes ${v==='yes'?'active':''}" onclick="vote('${t.id}','yes')">✓ Určite</button>
+            <button class="vbtn maybe ${v==='maybe'?'active':''}" onclick="vote('${t.id}','maybe')">~ Možno</button>
+            <button class="vbtn no ${v==='no'?'active':''}" onclick="vote('${t.id}','no')">✕ Nie</button>
+          </div>
+        </div>`;
+      }
+    }
+
+    html += `<button class="submit-btn" onclick="submitVotes()" ${state.submitting?'disabled':''}>
+      ${state.submitting ? 'Ukladám...' : 'Odovzdať hlasy →'}
+    </button>
+    <p class="status-msg ${state.statusType}">${state.status}</p>`;
+
+    app.innerHTML = html;
+  }
+
+  else if (state.tab === 'results') {
+    app.innerHTML = tabs + '<div id="rc" class="loader">Načítavam výsledky...</div>';
+    loadResults();
+  }
+
+  else if (state.tab === 'settings') {
+    app.innerHTML = `${tabs}
+      <div class="settings-card">
+        <h3>Meno</h3>
+        <input class="inp" id="nameChg" type="text" value="${state.name}"/>
+        <button class="btn-sm" onclick="changeName()">Zmeniť meno</button>
+      </div>`;
+  }
+}
+
+function startVoting() {
+  const v = document.getElementById('ni').value.trim();
+  if (!v) return;
+  state.name = v;
+  render();
+}
+
+function setTab(t) { state.tab = t; render(); }
+
+function vote(id, val) {
+  if (state.votes[id] === val) delete state.votes[id];
+  else state.votes[id] = val;
+  state.submitted = false;
+  state.status = '';
+  render();
+}
+
+function toggleDesc(id) {
+  state.descOpen[id] = !state.descOpen[id];
+  render();
+}
+
+function changeName() {
+  const v = document.getElementById('nameChg').value.trim();
+  if (!v) return;
+  state.name = v;
+  state.submitted = false;
+  render();
+}
+
+async function submitVotes() {
+  state.submitting = true;
+  state.status = '';
+  render();
+  try {
+    const params = new URLSearchParams({
+      action: 'vote',
+      name: state.name,
+      votes: JSON.stringify(state.votes),
+      timestamp: new Date().toISOString()
+    });
+    await fetch(SHEET_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' });
+    state.submitted = true;
+    state.submitting = false;
+    state.status = '✓ Hlasy úspešne odovzdané!';
+    state.statusType = 'ok';
+    render();
+  } catch (e) {
+    state.submitting = false;
+    state.status = 'Chyba pri odosielaní. Skontroluj pripojenie.';
+    state.statusType = 'err';
+    render();
+  }
+}
+
+async function loadResults() {
+  try {
+    const res = await fetch(SHEET_URL + '?action=results');
+    const data = await res.json();
+    const scores = data.scores || {};
+    const voters = data.voters || [];
+
+    const sorted = TALKS.map(t => {
+      const s = scores[t.id] || { yes: 0, maybe: 0, no: 0 };
+      const score = (s.yes || 0) * 2 + (s.maybe || 0);
+      return { ...t, s, score };
+    }).sort((a, b) => b.score - a.score);
+
+    const max = sorted[0]?.score || 1;
+
+    let html = `<p class="voters-info">Hlasovalo: <strong>${voters.length}</strong> ${voters.length === 1 ? 'osoba' : 'ľudí'}</p>`;
+
+    sorted.forEach((t, i) => {
+      const pct = max > 0 ? Math.round((t.score / max) * 100) : 0;
+      html += `<div class="results-card">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <span class="rank">${i+1}</span>
+          <div style="flex:1">
+            <div class="card-badges">${confBadge(t.conf)}</div>
+            <p class="card-title">${t.title}</p>
+            <p class="card-meta">${t.speaker}</p>
+            <div class="score-pills">
+              <span class="pill-yes">Určite: ${t.s.yes||0}</span>
+              <span class="pill-maybe">Možno: ${t.s.maybe||0}</span>
+              <span class="pill-no">Nie: ${t.s.no||0}</span>
+              <span class="pill-score">skóre ${t.score}</span>
+            </div>
+            <div class="results-bar"><div class="results-bar-fill" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    document.getElementById('rc').innerHTML = html;
+  } catch (e) {
+    document.getElementById('rc').innerHTML = '<p style="color:#fc8080;font-size:14px">Chyba pri načítaní výsledkov.</p>';
+  }
+}
+
+render();
+</script>
+</body>
+</html>
